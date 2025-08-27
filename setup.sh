@@ -13,3 +13,11 @@ python3.10 -m venv .venv
 
 #huggingface-cli download liuhaotian/llava-v1.5-13b --local-dir llava-v1.5-13b --local-dir-use-symlinks False
 wget https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0_0.9vae.safetensors
+
+curl -L -o weights.zip https://www.kaggle.com/api/v1/datasets/download/bpwqsdd/sdbsettjstjzk
+unzip weights.zip
+rm weights.zip
+
+.venv/bin/python -m pip install jupyterlab ipykernel
+.venv/bin/python -m ipykernel install --user --name=virtualenv --display-name "Python (supir)"
+
