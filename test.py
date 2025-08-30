@@ -6,6 +6,7 @@ from llava.llava_agent import LLavaAgent
 from CKPT_PTH import LLAVA_MODEL_PATH
 import os
 from torch.nn.functional import interpolate
+import math
 
 # hyparams here
 parser = argparse.ArgumentParser()
@@ -66,12 +67,20 @@ os.makedirs(args.save_dir, exist_ok=True)
 for img_pth in os.listdir(args.img_dir):
     img_name = os.path.splitext(img_pth)[0]
 
+
     LQ_ips = Image.open(os.path.join(args.img_dir, img_pth))
-    LQ_img, h0, w0 = PIL2Tensor(LQ_ips, upsacle=args.upscale, min_size=args.min_size)
+    
+    scale = args.upscale
+    if scale < 0:
+                img_size  = LQ_ips.width * LQ_ips.height
+                target_size = -scale * -scale
+                scale = math.sqrt(target_size / img_size)
+    
+    LQ_img, h0, w0 = PIL2Tensor(LQ_ips, upsacle=scale, min_size=args.min_size)
     LQ_img = LQ_img.unsqueeze(0).to("cuda")[:, :3, :, :]
 
     # step 1: Pre-denoise for LLaVA, resize to 512
-    LQ_img_512, h1, w1 = PIL2Tensor(LQ_ips, upsacle=args.upscale, min_size=args.min_size, fix_resize=512)
+    LQ_img_512, h1, w1 = PIL2Tensor(LQ_ips, upsacle=scale, min_size=args.min_size, fix_resize=512)
     LQ_img_512 = LQ_img_512.unsqueeze(0).to("cuda")[:, :3, :, :]
     clean_imgs = model.batchify_denoise(LQ_img_512)
     clean_PIL_img = Tensor2PIL(clean_imgs[0], h1, w1)
@@ -81,7 +90,7 @@ for img_pth in os.listdir(args.img_dir):
         captions = llava_agent.gen_image_caption([clean_PIL_img])
     else:
         captions = ['']
-    print(captions)
+    print(captions, LQ_img.shape, scale)
     
     # # step 3: Diffusion Process
     samples = model.batchify_sample(LQ_img, captions, num_steps=args.edm_steps, restoration_scale=args.s_stage1, s_churn=args.s_churn,
