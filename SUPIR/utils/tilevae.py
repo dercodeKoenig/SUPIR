@@ -189,8 +189,9 @@ def attn_forward_new_pt2_0(self, hidden_states,):
         # (batch, heads, source_length, target_length)
         attention_mask = attention_mask.view(batch_size, self.heads, -1, attention_mask.shape[-1])
 
-    if self.group_norm is not None:
-        hidden_states = self.group_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
+    norm_layer = getattr(self, "group_norm", None) or getattr(self, "norm", None)
+    if norm_layer is not None:
+        hidden_states = norm_layer(hidden_states.transpose(1, 2)).transpose(1, 2)
 
     query = self.to_q(hidden_states, scale=scale)
 
